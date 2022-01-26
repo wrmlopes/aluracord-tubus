@@ -69,6 +69,8 @@ export default function PaginaInicial() {
             as="form"
             onSubmit={(event) => {
               event.preventDefault();
+              console.log('username: ', username);
+              roteamento.push('/chat');
             }}
             styleSheet={{
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -98,6 +100,7 @@ export default function PaginaInicial() {
               }}
             />
             <Button
+              disabled={username?.length <=2}
               type='submit'
               label='Entrar'
               fullWidth
