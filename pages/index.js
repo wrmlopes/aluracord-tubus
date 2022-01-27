@@ -158,6 +158,6 @@ export default function PaginaInicial() {
 }
 
 // return a link src when username length is greater 2
-function srcImage(username){
+export function srcImage(username){
   return username?.length > 2 ? `https://github.com/${username}.png` : '';
 }
