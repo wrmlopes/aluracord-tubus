@@ -1,14 +1,37 @@
 import { Box, Text, TextField, Image, Button, Icon } from '@skynexui/components';
 import React from 'react';
+import { useRouter } from 'next/router';
 import appConfig from '../config.json';
-import { srcImage } from './index';
+import { createClient } from '@supabase/supabase-js';
+
+// Como fazer AJAX: https://medium.com/@omariosouto/entendendo-como-fazer-ajax-com-a-fetchapi-977ff20da3c6
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTY0MzMyNzM4NiwiZXhwIjoxOTU4OTAzMzg2fQ.m10OxrMIkn1_NIp6w8kqMd0BY2MGFY8T-hgP9ZVmWq0';
+const SUPABASE_URL = 'https://mgzczvdtwgbnrwuoiiva.supabase.co';
+const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 export default function ChatPage() {
   const [ mensagem, setMensagem ] = React.useState('');
   const [ listaDeMensagens, setListaDeMensagens ] = React.useState([]);
 
+  const router = useRouter();
+  const username = router.query.username;
+
+  console.log('username: ', username);
+  console.log('router.query: ', router.query);
+
+  React.useEffect(() => {
+    supabaseClient
+      .from('listaDeMensagens')
+      .select('*')
+      .order('id', { ascending: false })
+      .then(({ data }) => {
+        console.log('Dados da consulta:', data);
+        setListaDeMensagens(data);
+      });
+  }, []);
+
   // como recuperar usuário ???
-  const username = 'wrmlopes';
+  // const username = 'wrmlopes';
   /*
   // Usuário
   - Usuário digita no campo textarea
@@ -25,15 +48,24 @@ export default function ChatPage() {
     if (!novaMensagem?.length) { return; };
     // se existir mensagem empilha o trem
     const mensagem = {
-      id: new Date().getTime(),
+      //id: new Date().getTime(), // supbase vai gerar id
       de: username,
       texto: novaMensagem,
     };
 
-    setListaDeMensagens([
-      mensagem,
-      ...listaDeMensagens,
-    ]);
+    supabaseClient
+    .from('listaDeMensagens')
+    .insert([
+      // Tem que ser um objeto com os MESMOS CAMPOS que você escreveu no supabase
+      mensagem
+    ])
+    .then(({ data }) => {
+      console.log('Criando mensagem: ', data);
+      setListaDeMensagens([
+        data[0],
+        ...listaDeMensagens,
+      ]);
+    });
     setMensagem('');
   }
 
@@ -178,7 +210,7 @@ function MessageList(props) {
         marginBottom: '16px',
       }}
     >
-      {props.mensagens.map((mensagem) => {
+      {props.mensagens?.map((mensagem) => {
         return (
           <Text
             key={mensagem.id}
@@ -205,7 +237,7 @@ function MessageList(props) {
                   display: 'inline-block',
                   marginRight: '8px',
                 }}
-                src={`${srcImage(mensagem.de)}`}
+                src={`https://github.com/${mensagem.de}.png`}
               />
 
               <Icon

@@ -70,7 +70,13 @@ export default function PaginaInicial() {
             onSubmit={(event) => {
               event.preventDefault();
               console.log('username: ', username);
-              roteamento.push('/chat');
+              roteamento.push(
+                {
+                  pathname: '/chat',
+                  query: {username}
+                },
+                '/chat',
+              );;
             }}
             styleSheet={{
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
