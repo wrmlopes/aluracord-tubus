@@ -3,11 +3,21 @@ import React from 'react';
 import { useRouter } from 'next/router';
 import appConfig from '../config.json';
 import { createClient } from '@supabase/supabase-js';
+import { ButtonSendSticker } from '../src/components/ButtonSendSticker';
 
 // Como fazer AJAX: https://medium.com/@omariosouto/entendendo-como-fazer-ajax-com-a-fetchapi-977ff20da3c6
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTY0MzMyNzM4NiwiZXhwIjoxOTU4OTAzMzg2fQ.m10OxrMIkn1_NIp6w8kqMd0BY2MGFY8T-hgP9ZVmWq0';
 const SUPABASE_URL = 'https://mgzczvdtwgbnrwuoiiva.supabase.co';
 const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function escutaMensagensEmTempoReal(adicionaMensagem) {
+  return supabaseClient
+    .from('listaDeMensagens')
+    .on('INSERT', (respostaLive) => {
+      adicionaMensagem(respostaLive.new);
+    })
+    .subscribe();
+}
 
 export default function ChatPage() {
   const [ mensagem, setMensagem ] = React.useState('');
@@ -16,18 +26,37 @@ export default function ChatPage() {
   const router = useRouter();
   const username = router.query.username;
 
-  console.log('username: ', username);
-  console.log('router.query: ', router.query);
-
   React.useEffect(() => {
     supabaseClient
       .from('listaDeMensagens')
       .select('*')
       .order('id', { ascending: false })
       .then(({ data }) => {
-        console.log('Dados da consulta:', data);
         setListaDeMensagens(data);
       });
+
+    const subscription = escutaMensagensEmTempoReal((novaMensagem) => {
+      console.log('Nova mensagem:', novaMensagem);
+      console.log('listaDeMensagens:', listaDeMensagens);
+      // Quero reusar um valor de referencia (objeto/array) 
+      // Passar uma função pro setState
+
+      // setListaDeMensagens([
+      //     novaMensagem,
+      //     ...listaDeMensagens
+      // ])
+      setListaDeMensagens((valorAtualDaLista) => {
+        console.log('valorAtualDaLista:', valorAtualDaLista);
+        return [
+          novaMensagem,
+          ...valorAtualDaLista,
+        ]
+      });
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    }
   }, []);
 
   // como recuperar usuário ???
@@ -54,18 +83,18 @@ export default function ChatPage() {
     };
 
     supabaseClient
-    .from('listaDeMensagens')
-    .insert([
-      // Tem que ser um objeto com os MESMOS CAMPOS que você escreveu no supabase
-      mensagem
-    ])
-    .then(({ data }) => {
-      console.log('Criando mensagem: ', data);
-      setListaDeMensagens([
-        data[0],
-        ...listaDeMensagens,
-      ]);
-    });
+      .from('listaDeMensagens')
+      .insert([
+        // Tem que ser um objeto com os MESMOS CAMPOS que você escreveu no supabase
+        mensagem
+      ])
+      .then(({ data }) => {
+        console.log('Criando mensagem: ', data);
+        setListaDeMensagens([
+          data[ 0 ],
+          ...listaDeMensagens,
+        ]);
+      });
     setMensagem('');
   }
 
@@ -106,7 +135,7 @@ export default function ChatPage() {
             padding: '16px',
           }}
         >
-          <MessageList mensagens={listaDeMensagens} atualizaListaMsgs={setListaDeMensagens}/>
+          <MessageList mensagens={listaDeMensagens} atualizaListaMsgs={setListaDeMensagens} />
           {/* {listaDeMensagens.map((mensagemAtual) => {
                         return (
                             <li key={mensagemAtual.id}>
@@ -146,23 +175,11 @@ export default function ChatPage() {
                 color: appConfig.theme.colors.neutrals[ 200 ],
               }}
             />
-            <Button
-              disabled={!mensagem?.length} // botão desativado se não houver mensagempara envio
-              onClick={(event) => {
-                handleNovaMensagem(mensagem);
+            <ButtonSendSticker
+              onStickerClick={(sticker) => {
+                // console.log('[USANDO O COMPONENTE] Salva esse sticker no banco', sticker);
+                handleNovaMensagem(':sticker: ' + sticker);
               }}
-              iconName="FaArrowRight"
-              colorVariant="dark"
-              type="submit"
-              styleSheet={{
-                border: '0',
-                resize: 'none',
-                padding: '6px 8px 8px 8px',
-                backgroundColor: appConfig.theme.colors.neutrals[ 800 ],
-                marginRight: '12px',
-                color: appConfig.theme.colors.neutrals[ 200 ],
-              }}
-
             />
           </Box>
         </Box>
@@ -192,10 +209,10 @@ function Header() {
 function MessageList(props) {
   console.log(props);
 
-  function deleteMensagemComId(idMensagem){
-    const novaListaMsg = props.mensagens.filter((mensagem)=> mensagem.id != idMensagem);
+  function deleteMensagemComId(idMensagem) {
+    const novaListaMsg = props.mensagens.filter((mensagem) => mensagem.id != idMensagem);
     props.atualizaListaMsgs(novaListaMsg);
-    
+
   }
 
   return (
@@ -266,7 +283,15 @@ function MessageList(props) {
                 {(new Date().toLocaleDateString())}
               </Text>
             </Box>
-            {mensagem.texto}
+
+            {mensagem.texto.startsWith(':sticker:')
+              ? (
+                <Image src={mensagem.texto.replace(':sticker:', '')} />
+              )
+              : (
+                mensagem.texto
+              )}
+
           </Text>
         );
       })}

@@ -69,7 +69,6 @@ export default function PaginaInicial() {
             as="form"
             onSubmit={(event) => {
               event.preventDefault();
-              console.log('username: ', username);
               roteamento.push(
                 {
                   pathname: '/chat',
